@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Track Order | Arctic Logistics</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600&display=swap" rel="stylesheet">
+    <style>
+        body { padding: 5rem 1rem; background: #020617; }
+        .track-box {
+            max-width: 500px;
+            margin: 0 auto;
+            background: rgba(15, 23, 42, 0.8);
+            backdrop-filter: blur(20px);
+            border-radius: 32px;
+            padding: 3rem;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            text-align: center;
+        }
+        .status-pill {
+            display: inline-block;
+            padding: 0.5rem 1.5rem;
+            background: var(--ice);
+            color: #0f172a;
+            border-radius: 50px;
+            font-weight: 700;
+            margin: 1.5rem 0;
+            text-transform: uppercase;
+        }
+        .courier-card {
+            margin-top: 2rem;
+            padding: 1.5rem;
+            background: rgba(255,255,255,0.05);
+            border-radius: 20px;
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+        .call-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.8rem;
+            background: #10b981;
+            color: white;
+            padding: 1rem 2rem;
+            border-radius: 50px;
+            text-decoration: none;
+            font-weight: 600;
+            margin-top: 1rem;
+            transition: 0.3s;
+        }
+        .call-btn:hover { transform: scale(1.05); box-shadow: 0 10px 20px rgba(16, 185, 129, 0.3); }
+    </style>
+</head>
+<body>
+    <div class="track-box">
+        <h2>Order <span>Tracking</span></h2>
+        <div id="loading">Syncing with Arctic Satellite...</div>
+        <div id="content" style="display: none;">
+            <p id="tx-ref-display" style="font-size: 0.8rem; color: #64748b;"></p>
+            <div id="status" class="status-pill"></div>
+
+            <div id="pin-area" style="display: none; margin-top: 1rem;">
+                <p style="font-size: 0.75rem; color: #94a3b8; margin-bottom: 0.25rem; text-transform: uppercase; letter-spacing: 1px;">Share Delivery PIN with Rider</p>
+                <div id="pin-badge" class="pin-badge">----</div>
+            </div>
+
+            <!-- Chowdeck Timeline -->
+            <div class="timeline" id="tracking-timeline" style="margin-top: 2.5rem;">
+                <div class="timeline-step" id="step-received">
+                    <div class="timeline-step-title">Order Received</div>
+                    <div class="timeline-step-desc">Awaiting store confirmation</div>
+                </div>
+                <div class="timeline-step" id="step-preparing">
+                    <div class="timeline-step-title">Preparing Order</div>
+                    <div class="timeline-step-desc" id="prep-desc">Packaging cold-chain items</div>
+                </div>
+                <div class="timeline-step" id="step-pickup">
+                    <div class="timeline-step-title">Awaiting Pickup</div>
+                    <div class="timeline-step-desc">Rider dispatched to warehouse</div>
+                </div>
+                <div class="timeline-step" id="step-transit">
+                    <div class="timeline-step-title">In Transit</div>
+                    <div class="timeline-step-desc">Rider delivering to your address</div>
+                </div>
+                <div class="timeline-step" id="step-delivered">
+                    <div class="timeline-step-title">Delivered</div>
+                    <div class="timeline-step-desc">Enjoy your fresh frozen package!</div>
+                </div>
+            </div>
+            
+            <div id="courier-area" style="display: none; margin-top: 2rem;">
+                <div class="courier-card">
+                    <p style="font-size: 0.8rem; color: #94a3b8; margin-bottom: 0.5rem;">ASSIGNED COURIER</p>
+                    <h3 id="courier-name"></h3>
+                    <a id="call-link" href="#" class="call-btn">
+                        📞 Call Courier
+                    </a>
+                </div>
+            </div>
+
+            <!-- Review System -->
+            <div id="review-area" style="display: none; margin-top: 2rem;">
+                <div class="courier-card" style="border-color: var(--ice);">
+                    <h3 style="margin-bottom: 1rem;">Rate Your <span>Delivery</span></h3>
+                    <div id="star-rating" style="font-size: 2rem; cursor: pointer; margin-bottom: 1rem;">
+                        <span onclick="setRating(1)">☆</span>
+                        <span onclick="setRating(2)">☆</span>
+                        <span onclick="setRating(3)">☆</span>
+                        <span onclick="setRating(4)">☆</span>
+                        <span onclick="setRating(5)">☆</span>
+                    </div>
+                    <textarea id="review-comment" placeholder="Any feedback for the courier?" style="width: 100%; background: rgba(0,0,0,0.3); color: white; border: 1px solid var(--frost-border); border-radius: 12px; padding: 1rem; margin-bottom: 1rem;"></textarea>
+                    <button class="add-btn" style="width: 100%;" onclick="submitReview()">Send Feedback</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const urlParams = new URLSearchParams(window.location.search);
+        const txRef = urlParams.get('ref');
+
+        async function pollStatus() {
+            if (!txRef) {
+                document.getElementById('loading').textContent = "No tracking reference found.";
+                return;
+            }
+
+            try {
+                const res = await fetch(`http://localhost:8000/track-order/${txRef}`);
+                const data = await res.json();
+                
+                document.getElementById('loading').style.display = 'none';
+                document.getElementById('content').style.display = 'block';
+                document.getElementById('tx-ref-display').textContent = `REF: ${txRef}`;
+                document.getElementById('status').textContent = data.status.toUpperCase();
+                document.getElementById('status').style.background = data.status === 'delivered' ? '#10b981' : 'var(--ice)';
+
+                if (data.courier) {
+                    document.getElementById('courier-area').style.display = 'block';
+                    document.getElementById('courier-name').textContent = data.courier.name;
+                    document.getElementById('call-link').href = `tel:${data.courier.phone}`;
+                }
+
+                // --- Delivery PIN Display ---
+                if (data.delivery_pin && data.status !== 'delivered' && data.status !== 'rejected') {
+                    document.getElementById('pin-area').style.display = 'block';
+                    document.getElementById('pin-badge').textContent = data.delivery_pin;
+                } else {
+                    document.getElementById('pin-area').style.display = 'none';
+                }
+
+                // --- Timeline Updates ---
+                const steps = ['received', 'preparing', 'awaiting_pickup', 'claimed', 'in_transit', 'delivered'];
+                const currentStatus = data.status;
+                const currentIndex = steps.indexOf(currentStatus);
+
+                document.querySelectorAll('.timeline-step').forEach(el => {
+                    el.classList.remove('active', 'completed');
+                });
+
+                if (currentStatus === 'rejected') {
+                    document.getElementById('tracking-timeline').style.display = 'none';
+                    document.getElementById('status').style.background = '#ef4444';
+                    document.getElementById('status').textContent = `REJECTED: ${data.rejection_reason || 'Store Limit'}`;
+                } else {
+                    document.getElementById('tracking-timeline').style.display = 'block';
+
+                    // Step 1: received
+                    const stepRec = document.getElementById('step-received');
+                    if (currentIndex >= 0) {
+                        if (currentIndex === 0) stepRec.classList.add('active');
+                        else stepRec.classList.add('completed');
+                    }
+
+                    // Step 2: preparing
+                    const stepPrep = document.getElementById('step-preparing');
+                    const prepDesc = document.getElementById('prep-desc');
+                    if (currentIndex >= 1) {
+                        if (currentIndex === 1) {
+                            stepPrep.classList.add('active');
+                            if (data.preparation_duration) {
+                                prepDesc.textContent = `Packaging items • Est. Time: ${data.preparation_duration} mins`;
+                            }
+                        } else {
+                            stepPrep.classList.add('completed');
+                        }
+                    }
+
+                    // Step 3: awaiting pickup or claimed
+                    const stepPickup = document.getElementById('step-pickup');
+                    if (currentIndex >= 2) {
+                        if (currentIndex === 2 || currentStatus === 'claimed') {
+                            stepPickup.classList.add('active');
+                        } else {
+                            stepPickup.classList.add('completed');
+                        }
+                    }
+
+                    // Step 4: in transit
+                    const stepTransit = document.getElementById('step-transit');
+                    if (currentIndex >= 4) {
+                        if (currentIndex === 4) stepTransit.classList.add('active');
+                        else stepTransit.classList.add('completed');
+                    }
+
+                    // Step 5: delivered
+                    const stepDel = document.getElementById('step-delivered');
+                    if (currentIndex >= 5) {
+                        stepDel.classList.add('completed');
+                    }
+                }
+
+                // --- Product Protection: Visual Proof ---
+                const content = document.getElementById('content');
+                let proofHTML = '';
+                if (data.proof_pickup || data.proof_delivery) {
+                    proofHTML = `
+                        <div class="courier-card" style="text-align: left; background: rgba(16, 185, 129, 0.05); margin-top: 1rem;">
+                            <p style="font-size: 0.7rem; color: #10b981; margin-bottom: 0.5rem; font-weight: bold;">🛡️ PRODUCT INTEGRITY VERIFIED</p>
+                            <div style="display: flex; gap: 10px; overflow-x: auto; padding-bottom: 10px;">
+                                ${data.proof_pickup ? `
+                                    <div style="min-width: 120px;">
+                                        <img src="${data.proof_pickup}" style="width: 100%; height: 100px; object-fit: cover; border-radius: 12px; border: 1px solid var(--frost-border);">
+                                        <p style="font-size: 0.6rem; margin-top: 4px; color: #94a3b8;">Frozen Pickup</p>
+                                    </div>
+                                ` : ''}
+                                ${data.proof_delivery ? `
+                                    <div style="min-width: 120px;">
+                                        <img src="${data.proof_delivery}" style="width: 100%; height: 100px; object-fit: cover; border-radius: 12px; border: 1px solid var(--frost-border);">
+                                        <p style="font-size: 0.6rem; margin-top: 4px; color: #94a3b8;">Safe Delivery</p>
+                                    </div>
+                                ` : ''}
+                            </div>
+                        </div>
+                    `;
+                }
+
+                // --- Product Protection: Telemetry ---
+                let telemetryHTML = '';
+                if (data.telemetry && data.telemetry.length > 0) {
+                    const latest = data.telemetry[0];
+                    telemetryHTML = `
+                        <div class="courier-card" style="margin-top: 1rem; border-color: rgba(56, 189, 248, 0.3);">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                                <p style="font-size: 0.7rem; color: var(--ice); font-weight: bold;">❄️ ARCTIC-CHAIN™ TELEMETRY</p>
+                                <span style="font-size: 0.7rem; color: #10b981; animation: pulse 2s infinite;">● LIVE</span>
+                            </div>
+                            <h2 style="font-size: 2.5rem; margin: 0.5rem 0;">${latest.temp.toFixed(1)}°C</h2>
+                            <p style="font-size: 0.8rem; color: #94a3b8;">Status: <span style="color: #10b981;">Optimal Frost</span></p>
+                        </div>
+                    `;
+                }
+
+                // Inject dynamic content (preserving status and courier)
+                const dynamicSection = document.getElementById('dynamic-protection') || document.createElement('div');
+                dynamicSection.id = 'dynamic-protection';
+                dynamicSection.innerHTML = proofHTML + telemetryHTML;
+                if (!document.getElementById('dynamic-protection')) {
+                    document.getElementById('courier-area').before(dynamicSection);
+                }
+
+                if (data.status === 'delivered') {
+                    document.getElementById('review-area').style.display = 'block';
+                }
+            } catch (err) {
+                console.error("Tracking sync failed", err);
+            }
+        }
+
+        let currentRating = 0;
+        function setRating(r) {
+            currentRating = r;
+            const stars = document.getElementById('star-rating').children;
+            for (let i = 0; i < 5; i++) {
+                stars[i].innerHTML = i < r ? '★' : '☆';
+                stars[i].style.color = i < r ? 'var(--ice)' : 'white';
+            }
+        }
+
+        async function submitReview() {
+            if (currentRating === 0) { alert("Please select a star rating"); return; }
+            const data = {
+                tx_ref: txRef,
+                rating: currentRating,
+                comment: document.getElementById('review-comment').value
+            };
+
+            const res = await fetch('http://localhost:8000/submit-review', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            });
+
+            if (res.ok) {
+                document.getElementById('review-area').innerHTML = "<h3>Thank you for your feedback! ❄️</h3>";
+            }
+        }
+
+        setInterval(pollStatus, 3000);
+        pollStatus();
+    </script>
+</body>
+</html>

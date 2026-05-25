@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard | Arctic Logistics</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600&display=swap" rel="stylesheet">
+    <style>
+        .admin-form {
+            max-width: 600px;
+            margin: 4rem auto;
+            padding: 2rem;
+            background: var(--frost);
+            border: 1px solid var(--frost-border);
+            border-radius: 24px;
+            backdrop-filter: blur(20px);
+        }
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            color: var(--ice);
+            font-size: 0.9rem;
+        }
+        .form-group input, .form-group textarea {
+            width: 100%;
+            background: rgba(0,0,0,0.3);
+            border: 1px solid var(--frost-border);
+            color: white;
+            padding: 1rem;
+            border-radius: 12px;
+            outline: none;
+        }
+        .stock-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+        }
+    </style>
+</head>
+<body>
+    <nav>
+        <div class="nav-left">
+            <div class="logo">ARCTIC <span>ADMIN</span></div>
+        </div>
+        <div class="hamburger" onclick="toggleMenu()">
+            <span></span>
+            <span></span>
+            <span></span>
+        </div>
+    </nav>
+
+    <div class="nav-drawer">
+        <!-- Injected by nav.js -->
+    </div>
+
+    <script src="nav.js"></script>
+
+    <div class="admin-form">
+        <h2 style="margin-bottom: 2rem;">Register New Product</h2>
+        <form id="product-form">
+            <div class="form-group">
+                <label>Product Name</label>
+                <input type="text" id="name" placeholder="e.g. Frozen Tiger Prawns" required>
+            </div>
+            <div class="form-group">
+                <label>Price per KG ($)</label>
+                <input type="number" id="price" step="0.01" placeholder="15.00" required>
+            </div>
+            <div class="form-group">
+                <label>Description</label>
+                <textarea id="desc" rows="3" placeholder="Brief description of the product..."></textarea>
+            </div>
+            <div class="form-group">
+                <label>Target Logistics Hubs (Initial Stock)</label>
+                <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem;">
+                    <div>
+                        <input type="number" id="stock-lagos" placeholder="Lagos KG">
+                    </div>
+                    <div>
+                        <input type="number" id="stock-abuja" placeholder="Abuja KG">
+                    </div>
+                    <div>
+                        <input type="number" id="stock-warri" placeholder="Warri KG">
+                    </div>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label>Section / Category</label>
+                <input type="text" id="category" list="category-list" placeholder="e.g. Sea Food, Poultry, Vegetables">
+                <datalist id="category-list">
+                    <option value="Sea Food">
+                    <option value="Poultry">
+                    <option value="Vegetables">
+                    <option value="Beef & Steaks">
+                </datalist>
+            </div>
+
+            <div class="form-group" style="display: flex; align-items: center; gap: 1rem;">
+                <input type="checkbox" id="is-featured" style="width: auto;">
+                <label style="margin-bottom: 0;">Highlight as Featured Product</label>
+            </div>
+
+            <div class="form-group">
+                <label>Product Media</label>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                    <div>
+                        <input type="file" id="image-upload" accept="image/*" onchange="previewMedia('image')">
+                        <p style="font-size: 0.7rem; margin-top: 0.5rem;">Upload Image</p>
+                    </div>
+                    <div>
+                        <input type="file" id="video-upload" accept="video/*" onchange="previewMedia('video')">
+                        <p style="font-size: 0.7rem; margin-top: 0.5rem;">Upload Video (Optional)</p>
+                    </div>
+                </div>
+                <div id="media-preview" style="margin-top: 1rem; display: flex; gap: 1rem;"></div>
+            </div>
+            <button type="submit" class="add-btn" id="submit-btn">Deploy Media-Rich Product</button>
+        </form>
+    </div>
+
+    <div class="admin-form" style="max-width: 900px;">
+        <h2 style="margin-bottom: 2rem;">Manage <span>Inventory</span></h2>
+        <div id="inventory-list" style="display: grid; gap: 1rem;">
+            <!-- Inventory items loaded here -->
+        </div>
+    </div>
+
+    <script src="auth.js"></script>
+    <script src="nav.js"></script>
+    <script>
+        checkAuth('admin');
+
+        let uploadedImage = "";
+        let uploadedVideo = "";
+
+        async function previewMedia(type) {
+            const file = document.getElementById(`${type}-upload`).files[0];
+            if (!file) return;
+
+            const formData = new FormData();
+            formData.append('file', file);
+
+            const res = await fetch('http://localhost:8000/upload-media', {
+                method: 'POST',
+                headers: getAuthHeader(),
+                body: formData
+            });
+            const data = await res.json();
+            
+            const preview = document.getElementById('media-preview');
+            if (type === 'image') {
+                uploadedImage = data.url;
+                preview.innerHTML += `<img src="${data.url}" style="width: 100px; height: 100px; object-fit: cover; border-radius: 8px;">`;
+            } else {
+                uploadedVideo = data.url;
+                preview.innerHTML += `<video src="${data.url}" style="width: 100px; height: 100px; object-fit: cover; border-radius: 8px;" muted autoplay loop></video>`;
+            }
+        }
+
+        let editModeId = null;
+
+        document.getElementById('product-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const data = {
+                product: {
+                    name: document.getElementById('name').value,
+                    price_per_kg: parseFloat(document.getElementById('price').value),
+                    description: document.getElementById('desc').value,
+                    category: document.getElementById('category').value || "General",
+                    image: uploadedImage || "placeholder.jpg",
+                    video: uploadedVideo,
+                    is_featured: document.getElementById('is-featured').checked
+                },
+                initial_stock: {
+                    "Lagos": parseFloat(document.getElementById('stock-lagos').value || 0),
+                    "Abuja": parseFloat(document.getElementById('stock-abuja').value || 0),
+                    "Warri": parseFloat(document.getElementById('stock-warri').value || 0)
+                }
+            };
+
+            try {
+                const url = editModeId ? `http://localhost:8000/edit-product/${editModeId}` : 'http://localhost:8000/add-product';
+                const response = await fetch(url, {
+                    method: 'POST',
+                    headers: { 
+                        'Content-Type': 'application/json',
+                        ...getAuthHeader()
+                    },
+                    body: JSON.stringify(data)
+                });
+                
+                if (response.ok) {
+                    alert(editModeId ? 'Product updated!' : 'Product deployed!');
+                    location.reload();
+                }
+            } catch (err) {
+                alert('Action failed.');
+            }
+        });
+
+        async function loadInventory() {
+            const res = await fetch('http://localhost:8000/products');
+            const products = await res.json();
+            const list = document.getElementById('inventory-list');
+            list.innerHTML = products.map(p => `
+                <div style="display: flex; justify-content: space-between; align-items: center; background: rgba(255,255,255,0.05); padding: 1rem; border-radius: 12px; border: 1px solid var(--frost-border);">
+                    <div style="display: flex; gap: 1rem; align-items: center;">
+                        <img src="${p.image.includes('/') ? p.image : 'assets/'+p.image}" style="width: 50px; height: 50px; object-fit: cover; border-radius: 8px;">
+                        <div>
+                            <h4 style="margin:0;">${p.name}</h4>
+                            <p style="font-size: 0.7rem; color: var(--ice); margin:0;">${p.category} • ₦${p.price_per_kg}/kg</p>
+                        </div>
+                    </div>
+                    <div style="display: flex; gap: 0.5rem;">
+                        <button class="add-btn" style="padding: 0.4rem 0.8rem; font-size: 0.7rem;" onclick="startEdit(${JSON.stringify(p).replace(/"/g, '&quot;')})">Edit</button>
+                        <button class="add-btn" style="padding: 0.4rem 0.8rem; font-size: 0.7rem; background: #ef4444;" onclick="deleteProduct(${p.id})">Delete</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function startEdit(p) {
+            editModeId = p.id;
+            document.getElementById('name').value = p.name;
+            document.getElementById('price').value = p.price_per_kg;
+            document.getElementById('desc').value = p.description;
+            document.getElementById('category').value = p.category;
+            document.getElementById('is-featured').checked = p.is_featured;
+            uploadedImage = p.image;
+            uploadedVideo = p.video;
+            
+            document.getElementById('submit-btn').textContent = "Update Product & Media";
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        async function deleteProduct(id) {
+            if (!confirm("Are you sure? This cannot be undone.")) return;
+            const res = await fetch(`http://localhost:8000/delete-product/${id}`, {
+                method: 'POST',
+                headers: getAuthHeader()
+            });
+            if (res.ok) loadInventory();
+        }
+
+        loadInventory();
+    </script>
+</body>
+</html>

@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dispatch Monitor | Arctic Logistics</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600&display=swap" rel="stylesheet">
+    <style>
+        body { background: #020617; padding-top: 100px; }
+        .monitor-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 2rem 5%;
+            background: rgba(15, 23, 42, 0.8);
+            border-bottom: 1px solid var(--frost-border);
+        }
+        .status-badge {
+            padding: 0.5rem 1rem;
+            border-radius: 50px;
+            font-size: 0.8rem;
+            background: #10b981;
+            color: white;
+            animation: pulse 2s infinite;
+        }
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+        .order-table {
+            width: 90%;
+            margin: 2rem auto;
+            border-collapse: collapse;
+        }
+        .order-table th {
+            text-align: left;
+            padding: 1rem;
+            color: var(--ice);
+            border-bottom: 2px solid var(--frost-border);
+        }
+        .order-table td {
+            padding: 1.5rem 1rem;
+            border-bottom: 1px solid var(--frost-border);
+        }
+        .kg-highlite {
+            font-weight: 600;
+            color: var(--ice);
+            font-size: 1.2rem;
+        }
+        .hub-tag {
+            padding: 0.3rem 0.8rem;
+            border-radius: 4px;
+            background: #1e293b;
+            font-size: 0.8rem;
+        }
+    </style>
+</head>
+<body>
+    <nav>
+        <div class="nav-left">
+            <div class="logo">ARCTIC <span>LOGISTICS</span></div>
+        </div>
+        <div class="hamburger" onclick="toggleMenu()">
+            <span></span>
+            <span></span>
+            <span></span>
+        </div>
+    </nav>
+
+    <div class="nav-drawer">
+        <a href="/"><span>01</span> ❄️ Storefront</a>
+        <a href="/admin.html"><span>02</span> 🛠️ Admin Panel</a>
+        <a href="/monitor.html"><span>03</span> 🚛 Dispatch Monitor</a>
+        <a href="/seller.html"><span>04</span> 🏢 Sub-Seller Portal</a>
+    </div>
+
+    <script src="nav.js"></script>
+
+    <div style="padding: 2rem 5%;">
+        <h2 style="margin-bottom: 1.5rem;">Infrastructure <span>Protection</span></h2>
+        <div id="hub-health" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1.5rem; margin-bottom: 3rem;">
+            <!-- Hub Health Cards -->
+        </div>
+
+        <h2 style="margin-bottom: 1.5rem;">Active <span>Operations</span></h2>
+        <table class="order-table" style="width: 100%; margin: 0;">
+        <thead>
+            <tr>
+                <th>Time</th>
+                <th>Customer</th>
+                <th>City Hub</th>
+                <th>Items & Weight</th>
+                <th>Payment Status</th>
+                <th>Action</th>
+            </tr>
+        </thead>
+        <tbody id="order-feed">
+            <!-- Orders injected here -->
+        </tbody>
+    </table>
+
+    <script src="auth.js"></script>
+    <script src="nav.js"></script>
+
+    <script>
+        // Production Check
+        checkAuth('admin');
+
+        async function fetchHubHealth() {
+            const cities = ['Lagos', 'Abuja', 'Warri'];
+            const container = document.getElementById('hub-health');
+            let html = '';
+
+            for (const city of cities) {
+                try {
+                    const res = await fetch(`http://localhost:8000/hub/telemetry/${city}`);
+                    const data = await res.json();
+                    html += `
+                        <div class="courier-card" style="margin:0; padding: 1.5rem; background: rgba(15, 23, 42, 0.6); border: 1px solid ${data.current_temp > -20 ? '#ef4444' : 'var(--frost-border)'};">
+                            <div style="display: flex; justify-content: space-between;">
+                                <h3 style="margin:0;">${city} Hub</h3>
+                                <span style="color: #10b981; font-size: 0.7rem;">● ONLINE</span>
+                            </div>
+                            <h2 style="font-size: 2rem; margin: 1rem 0; color: ${data.current_temp > -20 ? '#ef4444' : 'var(--ice)'};">${data.current_temp.toFixed(1)}°C</h2>
+                            <p style="font-size: 0.7rem; color: #94a3b8;">Status: ${data.status}</p>
+                            <div style="height: 4px; background: #1e293b; border-radius: 2px; margin-top: 10px;">
+                                <div style="width: 90%; height: 100%; background: #10b981; border-radius: 2px;"></div>
+                            </div>
+                        </div>
+                    `;
+                } catch (e) { console.error(e); }
+            }
+            container.innerHTML = html;
+        }
+
+        async function fetchOrders() {
+            try {
+                const res = await fetch('http://localhost:8000/paid-orders', { headers: getAuthHeader() });
+                const orders = await res.json();
+                renderOrders(orders);
+            } catch (err) {
+                console.error("Failed to fetch orders", err);
+            }
+        }
+
+        async function acceptOrder(orderId) {
+            const duration = prompt("Enter preparation duration in minutes:", "15");
+            if (duration === null) return;
+            const parsed = parseInt(duration);
+            if (isNaN(parsed) || parsed <= 0) {
+                alert("Invalid duration entered.");
+                return;
+            }
+            try {
+                const res = await fetch(`http://localhost:8000/orders/${orderId}/accept`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json', ...getAuthHeader() },
+                    body: JSON.stringify({ preparation_duration: parsed })
+                });
+                if (res.ok) fetchOrders();
+            } catch (e) { console.error(e); }
+        }
+
+        async function rejectOrder(orderId) {
+            const reason = prompt("Enter reason for rejection:", "Out of stock");
+            if (reason === null) return;
+            try {
+                const res = await fetch(`http://localhost:8000/orders/${orderId}/reject`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json', ...getAuthHeader() },
+                    body: JSON.stringify({ reason: reason })
+                });
+                if (res.ok) fetchOrders();
+            } catch (e) { console.error(e); }
+        }
+
+        async function readyOrder(orderId) {
+            if (!confirm("Is this order packed and ready for pickup?")) return;
+            try {
+                const res = await fetch(`http://localhost:8000/orders/${orderId}/ready`, {
+                    method: 'PUT',
+                    headers: getAuthHeader()
+                });
+                if (res.ok) fetchOrders();
+            } catch (e) { console.error(e); }
+        }
+
+        function renderOrders(orders) {
+            const feed = document.getElementById('order-feed');
+            feed.innerHTML = '';
+            
+            if (orders.length === 0) {
+                feed.innerHTML = '<tr><td colspan="6" style="text-align:center; padding: 4rem;">Waiting for incoming paid orders...</td></tr>';
+                return;
+            }
+
+            orders.reverse().forEach(order => {
+                const row = document.createElement('tr');
+                const items = typeof order.items === 'string' ? JSON.parse(order.items) : order.items;
+                const itemSummary = items.map(i => `${i.kg}kg Product#${i.product_id}`).join(', ');
+                
+                const slipData = new URLSearchParams({
+                    name: order.customer_name,
+                    city: order.city,
+                    tx: order.tx_ref,
+                    items: JSON.stringify(items)
+                }).toString();
+
+                let actionButtonsHTML = '';
+                if (order.status === 'received') {
+                    actionButtonsHTML = `
+                        <button class="add-btn" style="margin:0; padding: 0.4rem 0.8rem; font-size:0.75rem; background: #10b981; color: white;" onclick="acceptOrder(${order.id})">Accept</button>
+                        <button class="add-btn" style="margin:0; padding: 0.4rem 0.8rem; font-size:0.75rem; background: #ef4444; color: white;" onclick="rejectOrder(${order.id})">Reject</button>
+                    `;
+                } else if (order.status === 'preparing') {
+                    actionButtonsHTML = `
+                        <button class="add-btn" style="margin:0; padding: 0.4rem 0.8rem; font-size:0.75rem; background: #f59e0b; color: white;" onclick="readyOrder(${order.id})">Mark Ready</button>
+                    `;
+                } else {
+                    actionButtonsHTML = `
+                        <button class="add-btn" style="margin:0; padding: 0.4rem 0.8rem; font-size:0.75rem;" onclick="window.open('packing_slip.html?${slipData}', '_blank')">Generate Slip</button>
+                    `;
+                }
+
+                row.innerHTML = `
+                    <td>${new Date().toLocaleTimeString()}</td>
+                    <td>${order.customer_name}</td>
+                    <td><span class="hub-tag">${order.city}</span></td>
+                    <td class="kg-highlite">${itemSummary}</td>
+                    <td>
+                        <span class="status-badge ${order.status}">${order.status.toUpperCase()}</span>
+                        ${order.preparation_duration ? `<br><small style="color: #f59e0b;">Prep Time: ${order.preparation_duration}m</small>` : ''}
+                        ${order.rejection_reason ? `<br><small style="color: #ef4444;">Reason: ${order.rejection_reason}</small>` : ''}
+                        ${order.courier_id ? `<br><small style="color: #94a3b8;">Driver ID: ${order.courier_id}</small>` : ''}
+                    </td>
+                    <td>
+                        <div style="display: flex; gap: 0.2rem;">
+                            ${actionButtonsHTML}
+                        </div>
+                    </td>
+                `;
+                feed.appendChild(row);
+            });
+        }
+
+        // Auto-refresh every 5 seconds
+        setInterval(() => { fetchOrders(); fetchHubHealth(); }, 5000);
+        fetchOrders();
+        fetchHubHealth();
+    </script>
+</body>
+</html>

@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Arctic Logistics | Premium Frozen Store</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="glass-bg"></div>
+    
+    <nav>
+        <div class="nav-left">
+            <div class="logo">ARCTIC <span>LOGISTICS</span></div>
+            <div class="city-picker">
+                <select id="city-select">
+                    <option value="Lagos">Lagos Hub</option>
+                    <option value="Abuja">Abuja Hub</option>
+                    <option value="Warri">Warri Hub</option>
+                </select>
+            </div>
+        </div>
+        
+        <div class="hamburger" onclick="toggleMenu()">
+            <span></span>
+            <span></span>
+            <span></span>
+        </div>
+    </nav>
+
+    <div class="nav-drawer">
+        <!-- Injected by nav.js -->
+    </div>
+
+    <script src="nav.js"></script>
+
+    <header>
+        <h1>Pure Cold. <span>Premium Delivery.</span></h1>
+        <p>Industrial-grade frozen food logistics, delivered in Kilograms.</p>
+    </header>
+
+    <section id="promo-section" class="promo-container">
+        <h2 class="section-title">Exclusive <span>Bundles</span></h2>
+        <div id="package-grid" class="package-grid">
+            <!-- Packages injected by JS -->
+        </div>
+    </section>
+
+    <div id="dynamic-sections">
+        <!-- Categories and Products will be injected here -->
+    </div>
+
+    <div id="cart-drawer" class="hidden">
+        <h2>Your Fulfillment</h2>
+        <div id="cart-items"></div>
+        <div class="cart-footer">
+            <div class="total">Total Weight: <span id="total-weight">0</span> KG</div>
+            <button id="checkout-btn">Initialize Delivery</button>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>

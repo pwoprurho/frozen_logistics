@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Secure Access | Arctic Logistics</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600&display=swap" rel="stylesheet">
+    <style>
+        body {
+            background: #020617;
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            perspective: 1000px;
+        }
+
+        /* --- Lamp Aesthetic --- */
+        .lamp-container {
+            position: absolute;
+            top: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 10;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .lamp-cord {
+            width: 2px;
+            height: 150px;
+            background: #475569;
+        }
+
+        .lamp-shade {
+            width: 60px;
+            height: 40px;
+            background: #1e293b;
+            border-radius: 50% 50% 10% 10%;
+            position: relative;
+        }
+
+        .lamp-bulb {
+            width: 20px;
+            height: 20px;
+            background: #fff;
+            border-radius: 50%;
+            position: absolute;
+            bottom: -5px;
+            left: 50%;
+            transform: translateX(-50%);
+            box-shadow: 0 0 40px #38bdf8, 0 0 100px #38bdf8;
+            animation: flicker 4s infinite;
+        }
+
+        .light-cone {
+            position: absolute;
+            top: 180px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 500px;
+            height: 600px;
+            background: radial-gradient(circle at top, rgba(56, 189, 248, 0.15), transparent 70%);
+            pointer-events: none;
+            z-index: 5;
+        }
+
+        @keyframes flicker {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.9; }
+            52% { opacity: 1; }
+            54% { opacity: 0.8; }
+            56% { opacity: 1; }
+        }
+
+        .login-box {
+            width: 400px;
+            padding: 3rem;
+            background: rgba(15, 23, 42, 0.8);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 32px;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+            z-index: 20;
+            position: relative;
+            transform-style: preserve-3d;
+        }
+
+        .login-box h2 {
+            font-size: 2rem;
+            text-align: center;
+            margin-bottom: 2rem;
+            font-weight: 600;
+        }
+
+        .login-box h2 span { color: var(--ice); }
+
+        .input-group {
+            margin-bottom: 1.5rem;
+        }
+
+        .input-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-size: 0.8rem;
+            color: #94a3b8;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .input-group input {
+            width: 100%;
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: white;
+            padding: 1rem;
+            border-radius: 12px;
+            outline: none;
+            transition: 0.3s;
+        }
+
+        .input-group input:focus {
+            border-color: var(--ice);
+            box-shadow: 0 0 15px rgba(56, 189, 248, 0.2);
+        }
+
+        .login-btn {
+            width: 100%;
+            padding: 1rem;
+            background: var(--ice);
+            color: #0f172a;
+            border: none;
+            border-radius: 12px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: 0.3s;
+            margin-top: 1rem;
+        }
+
+        .login-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px rgba(56, 189, 248, 0.4);
+        }
+
+        #error-msg {
+            color: #f87171;
+            font-size: 0.85rem;
+            text-align: center;
+            margin-top: 1.5rem;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="lamp-container">
+        <div class="lamp-cord"></div>
+        <div class="lamp-shade">
+            <div class="lamp-bulb"></div>
+        </div>
+    </div>
+    <div class="light-cone"></div>
+
+    <div class="login-box">
+        <h2>Arctic <span>Logistics</span></h2>
+        <form id="login-form">
+            <div class="input-group">
+                <label>Email Address</label>
+                <input type="email" id="email" placeholder="admin@arctic.com" required>
+            </div>
+            <div class="input-group">
+                <label>Password</label>
+                <input type="password" id="password" placeholder="••••••••" required>
+            </div>
+            <button type="submit" class="login-btn">Authenticate</button>
+        </form>
+        <p id="error-msg"></p>
+        <p style="text-align: center; margin-top: 2rem; font-size: 0.85rem; color: #64748b;">
+            New partner? <a href="register.html" style="color: var(--ice); text-decoration: none;">Register here</a>
+        </p>
+    </div>
+
+    <script>
+        document.getElementById('login-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+
+            // Use URLSearchParams for application/x-www-form-urlencoded (standard for OAuth2)
+            const params = new URLSearchParams();
+            params.append('username', email);
+            params.append('password', password);
+
+            try {
+                // Ensure no trailing slash on /token
+                const response = await fetch('http://localhost:8000/token', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: params
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    localStorage.setItem('arctic_token', data.access_token);
+                    localStorage.setItem('arctic_role', data.role);
+                    
+                    if (data.role === 'admin') window.location.href = 'dashboard.html';
+                    else if (data.role === 'delivery_provider') window.location.href = 'driver.html';
+                    else window.location.href = 'index.html';
+                } else {
+                    const err = await response.json();
+                    const msg = document.getElementById('error-msg');
+                    msg.textContent = err.detail || 'Access Denied';
+                    msg.style.display = 'block';
+                }
+            } catch (err) {
+                alert('Connection refused. Is the Python backend running?');
+            }
+        });
+    </script>
+</body>
+</html>

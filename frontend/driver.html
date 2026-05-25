@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Courier Hub | Arctic Logistics</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600&display=swap" rel="stylesheet">
+    <style>
+        body { padding-top: 100px; }
+        .order-card {
+            background: var(--frost);
+            border: 1px solid var(--frost-border);
+            border-radius: 20px;
+            padding: 1.5rem;
+            margin-bottom: 1rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .order-info h3 { margin: 0; font-size: 1.1rem; }
+        .order-info p { margin: 5px 0 0; color: var(--ice); font-size: 0.9rem; }
+        .action-btn {
+            background: var(--ice);
+            color: var(--bg);
+            border: none;
+            padding: 0.6rem 1.2rem;
+            border-radius: 50px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+        .status-badge {
+            background: rgba(56, 189, 248, 0.1);
+            color: var(--ice);
+            padding: 0.3rem 0.8rem;
+            border-radius: 50px;
+            font-size: 0.7rem;
+            text-transform: uppercase;
+        }
+    </style>
+</head>
+<body>
+    <script src="auth.js"></script>
+    <script src="nav.js"></script>
+    
+    <nav>
+        <div class="nav-left">
+            <div class="logo">ARCTIC <span>COURIER</span></div>
+        </div>
+        <div class="hamburger" onclick="toggleMenu()">
+            <span></span><span></span><span></span>
+        </div>
+    </nav>
+
+    <div class="nav-drawer">
+        <a href="/"><span>01</span> ❄️ Storefront</a>
+        <a href="/driver.html"><span>02</span> 🚲 Courier Hub</a>
+        <a href="/login.html" onclick="logout()"><span>05</span> 🔒 Logout</a>
+    </div>
+
+    <div style="max-width: 600px; margin: 0 auto; padding: 1rem;">
+        <!-- Online/Offline Panel -->
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+            <div class="status-toggle-container">
+                <span id="online-status-label" style="font-weight: 600; color: #94a3b8;">OFFLINE</span>
+                <label class="toggle-switch">
+                    <input type="checkbox" id="status-toggle" onchange="toggleOnlineStatus()">
+                    <span class="slider"></span>
+                </label>
+            </div>
+            
+            <div style="font-size: 0.8rem; color: var(--ice);">
+                Rider: <span id="rider-id-display" style="font-weight: bold; color: white;">...</span>
+            </div>
+        </div>
+
+        <!-- Rider Wallet Widget -->
+        <div class="wallet-card">
+            <h4 style="margin: 0; text-transform: uppercase; color: #94a3b8; font-size: 0.8rem; letter-spacing: 1px;">Wallet Balance</h4>
+            <div class="wallet-balance" id="wallet-balance">₦0.00</div>
+            <div class="wallet-stats">
+                <div>Trips Completed: <span id="trips-completed" style="color: white; font-weight: bold;">0</span></div>
+                <button onclick="cashoutWallet()" class="action-btn" style="padding: 0.4rem 1rem; font-size: 0.75rem; background: var(--ice); color: var(--bg);">Withdraw</button>
+            </div>
+        </div>
+
+        <h1 style="font-size: 1.8rem; margin-bottom: 1rem;">Available <span>Deliveries</span></h1>
+        <div id="available-list"></div>
+
+        <h1 style="font-size: 1.8rem; margin-top: 3rem; margin-bottom: 1rem;">Your <span>Active Runs</span></h1>
+        <div id="active-list"></div>
+    </div>
+
+    <script>
+        checkAuth('delivery_provider');
+
+        let isOnline = false;
+
+        async function fetchProfile() {
+            try {
+                const res = await fetch('http://localhost:8000/courier/profile', { headers: getAuthHeader() });
+                const data = await res.json();
+                
+                document.getElementById('wallet-balance').textContent = `₦${data.wallet_balance.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+                document.getElementById('trips-completed').textContent = data.completed_runs;
+                document.getElementById('rider-id-display').textContent = data.fullname || data.email;
+                
+                isOnline = data.is_online;
+                const toggle = document.getElementById('status-toggle');
+                toggle.checked = isOnline;
+                
+                const label = document.getElementById('online-status-label');
+                label.textContent = isOnline ? "ONLINE" : "OFFLINE";
+                label.style.color = isOnline ? "#10b981" : "#94a3b8";
+                
+                fetchDeliveries();
+            } catch (err) {
+                console.error("Profile sync failed", err);
+            }
+        }
+
+        async function toggleOnlineStatus() {
+            try {
+                const res = await fetch('http://localhost:8000/courier/toggle-status', {
+                    method: 'POST',
+                    headers: getAuthHeader()
+                });
+                const data = await res.json();
+                fetchProfile();
+            } catch (err) {
+                alert("Failed to toggle online status.");
+            }
+        }
+
+        function cashoutWallet() {
+            alert("Funds transferred successfully to your bank account! 💸");
+        }
+
+        async function fetchDeliveries() {
+            const list = document.getElementById('available-list');
+            if (!isOnline) {
+                list.innerHTML = '<p style="color: #64748b; font-style: italic;">You must be ONLINE to see available deliveries.</p>';
+                return;
+            }
+            try {
+                const res = await fetch('http://localhost:8000/deliveries/available', { headers: getAuthHeader() });
+                const orders = await res.json();
+                renderAvailable(orders);
+            } catch (err) { console.error(err); }
+        }
+
+        function renderAvailable(orders) {
+            const list = document.getElementById('available-list');
+            if (orders.length === 0) { list.innerHTML = '<p style="color: #666;">No available orders in your city right now.</p>'; return; }
+            
+            list.innerHTML = orders.map(o => `
+                <div class="order-card">
+                    <div class="order-info">
+                        <h3>Order #${o.id}</h3>
+                        <p>${o.city} Hub • ${o.items.length} Items • Payout: ₦${o.payout_amount.toLocaleString()}</p>
+                    </div>
+                    <button class="action-btn" onclick="claimOrder(${o.id})">Claim Run</button>
+                </div>
+            `).join('');
+        }
+
+        async function claimOrder(id) {
+            const res = await fetch(`http://localhost:8000/deliveries/claim/${id}`, { 
+                method: 'POST', 
+                headers: getAuthHeader() 
+            });
+            if (res.ok) { 
+                alert('Order claimed! Head to the warehouse.'); 
+                fetchDeliveries(); 
+                fetchActive(); 
+            } else {
+                const data = await res.json();
+                alert(data.detail || 'Could not claim order');
+            }
+        }
+
+        async function fetchActive() {
+            const res = await fetch('http://localhost:8000/paid-orders', { headers: getAuthHeader() });
+            const orders = await res.json();
+            const activeList = document.getElementById('active-list');
+            
+            const myOrders = orders.filter(o => o.status !== 'delivered' && o.status !== 'rejected'); 
+
+            if (myOrders.length === 0) {
+                activeList.innerHTML = '<p style="color: #666;">No active runs. Claim an order to begin.</p>';
+                return;
+            }
+
+            activeList.innerHTML = myOrders.map(o => `
+                <div class="order-card" style="flex-direction: column; align-items: flex-start; gap: 1rem;">
+                    <div style="width: 100%; display: flex; justify-content: space-between; align-items: center;">
+                        <div class="order-info">
+                            <h3>${o.customer_name}</h3>
+                            <p>${o.city} • Payout: ₦${o.payout_amount.toLocaleString()}</p>
+                        </div>
+                        <span class="status-badge ${o.status}">${o.status}</span>
+                    </div>
+                    
+                    <div style="width: 100%; display: flex; gap: 0.5rem;">
+                        ${o.status === 'claimed' ? `
+                            <div style="width: 100%;">
+                                <input type="file" id="proof-${o.id}" style="display:none" onchange="handleProof(${o.id}, 'in_transit')">
+                                <button class="action-btn" style="width: 100%;" onclick="document.getElementById('proof-${o.id}').click()">📸 Take Pickup Photo</button>
+                                <p style="font-size: 0.7rem; color: #94a3b8; margin-top: 5px;">* Visual Proof required to start transit</p>
+                            </div>
+                        ` : ''}
+                        
+                        ${o.status === 'in_transit' ? `
+                            <div style="width: 100%; display: flex; flex-direction: column; gap: 0.8rem;">
+                                <input type="text" id="pin-${o.id}" placeholder="Enter 4-Digit Customer PIN" maxlength="4" style="background: rgba(0,0,0,0.3); border: 1px solid var(--frost-border); color: white; padding: 0.8rem; border-radius: 8px; text-align: center; font-size: 1.2rem; letter-spacing: 0.2rem;">
+                                <input type="file" id="proof-${o.id}" style="display:none">
+                                <button class="action-btn" style="width: 100%; background: #10b981;" onclick="submitDeliveryPIN(${o.id})">✅ Complete Delivery (PIN + Photo)</button>
+                            </div>
+                        ` : ''}
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        async function submitDeliveryPIN(id) {
+            const pinInput = document.getElementById(`pin-${id}`);
+            const pin = pinInput.value.trim();
+            if (pin.length !== 4) {
+                alert("Please enter a valid 4-digit Delivery PIN.");
+                return;
+            }
+            
+            const fileInput = document.getElementById(`proof-${id}`);
+            fileInput.onchange = async () => {
+                if (!fileInput.files[0]) return;
+                
+                const btn = document.querySelector(`button[onclick="submitDeliveryPIN(${id})"]`);
+                const originalText = btn.textContent;
+                btn.disabled = true;
+                btn.textContent = "Verifying PIN...";
+
+                const formData = new FormData();
+                formData.append('file', fileInput.files[0]);
+
+                try {
+                    const uploadRes = await fetch('http://localhost:8000/upload-media', {
+                        method: 'POST',
+                        body: formData
+                    });
+                    const uploadData = await uploadRes.json();
+                    
+                    const completeRes = await fetch(`http://localhost:8000/deliveries/complete/${id}`, {
+                        method: 'POST',
+                        headers: { 
+                            'Content-Type': 'application/json',
+                            ...getAuthHeader()
+                        },
+                        body: JSON.stringify({ delivery_pin: pin, proof: uploadData.url })
+                    });
+                    const completeData = await completeRes.json();
+                    
+                    if (completeRes.ok) {
+                        alert("Fulfillment completed! PIN verified and wallet credited.");
+                        fetchProfile();
+                        fetchActive();
+                    } else {
+                        alert(completeData.detail || "Incorrect Delivery PIN. Please confirm with the customer.");
+                        btn.disabled = false;
+                        btn.textContent = originalText;
+                    }
+                } catch (err) {
+                    alert("Verification connection error.");
+                    btn.disabled = false;
+                    btn.textContent = originalText;
+                }
+            };
+            fileInput.click();
+        }
+
+        async function handleProof(id, nextStatus) {
+            const fileInput = document.getElementById(`proof-${id}`);
+            if (!fileInput.files[0]) return;
+
+            const formData = new FormData();
+            formData.append('file', fileInput.files[0]);
+
+            try {
+                const uploadRes = await fetch('http://localhost:8000/upload-media', {
+                    method: 'POST',
+                    body: formData
+                });
+                const uploadData = await uploadRes.json();
+                
+                await updateStatus(id, nextStatus, uploadData.url);
+            } catch (err) {
+                alert("Proof upload failed. Please check connection.");
+            }
+        }
+
+        async function updateStatus(id, status, proofUrl = null) {
+            let url = `http://localhost:8000/deliveries/update-status/${id}?status=${status}`;
+            if (proofUrl) url += `&proof=${encodeURIComponent(proofUrl)}`;
+
+            const res = await fetch(url, { 
+                method: 'POST', 
+                headers: getAuthHeader() 
+            });
+            if (res.ok) { fetchActive(); fetchDeliveries(); }
+        }
+
+        fetchProfile();
+        fetchActive();
+    </script>
+</body>
+</html>

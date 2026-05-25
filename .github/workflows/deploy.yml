@@ -1,0 +1,27 @@
+name: Deploy to Hetzner
+
+on:
+  push:
+    branches:
+      - main # Runs whenever you push to the 'main' branch
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.HOST }}
+          username: ${{ secrets.USERNAME }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            # Navigate to the logistics directory on your Hetzner server
+            cd /root/logistics
+            
+            # Pull the latest changes from GitHub
+            git pull origin main
+            
+            # Rebuild and restart the container with zero downtime
+            docker compose up -d --build

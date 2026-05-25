@@ -1,0 +1,29 @@
+# Virtual environments
+venv/
+.venv/
+env/
+ENV/
+
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Environment files
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+backend/.env
+
+# Database files
+*.db
+*.sqlite3
+
+# Node dependencies
+node_modules/
+
+# OS files
+.DS_Store
+Thumbs.db

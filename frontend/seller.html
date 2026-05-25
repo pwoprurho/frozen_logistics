@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sub-Seller Portal | Arctic Logistics</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600&display=swap" rel="stylesheet">
+    <style>
+        body { padding-top: 100px; }
+        .seller-container {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+        .restock-card {
+            background: var(--frost);
+            border: 1px solid var(--frost-border);
+            border-radius: 24px;
+            padding: 2rem;
+            margin-bottom: 2rem;
+        }
+        .input-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+        input, select {
+            background: rgba(0,0,0,0.3);
+            border: 1px solid var(--frost-border);
+            color: white;
+            padding: 0.8rem;
+            border-radius: 8px;
+            outline: none;
+        }
+    </style>
+</head>
+<body>
+    <nav>
+        <div class="nav-left">
+            <div class="logo">ARCTIC <span>PORTAL</span></div>
+        </div>
+        <div class="hamburger" onclick="toggleMenu()">
+            <span></span>
+            <span></span>
+            <span></span>
+        </div>
+    </nav>
+
+    <div class="nav-drawer">
+        <a href="/"><span>01</span> ❄️ Storefront</a>
+        <a href="/admin.html"><span>02</span> 🛠️ Admin Panel</a>
+        <a href="/monitor.html"><span>03</span> 🚛 Dispatch Monitor</a>
+        <a href="/seller.html"><span>04</span> 🏢 Sub-Seller Portal</a>
+    </div>
+
+    <script src="nav.js"></script>
+
+    <div class="seller-container">
+        <h1>B2B Restock & Scheduling</h1>
+        <p style="color: var(--ice); margin-bottom: 2rem;">Request bulk delivery for your retail outlet.</p>
+
+        <div class="restock-card">
+            <h3>New Restock Request</h3>
+            <div style="margin-top: 1.5rem;">
+                <div class="input-row">
+                    <input type="text" id="seller-name" placeholder="Retailer Name">
+                    <select id="warehouse-id">
+                        <option value="1">Lagos Hub #1</option>
+                        <option value="2">Abuja Hub #1</option>
+                    </select>
+                    <input type="date" id="schedule-date">
+                </div>
+                <div id="items-container">
+                    <div class="input-row">
+                        <select class="item-id">
+                            <option value="1">Frozen Salmon</option>
+                            <option value="2">Chicken Breasts</option>
+                            <option value="3">Mixed Berries</option>
+                        </select>
+                        <input type="number" class="item-kg" placeholder="Weight (KG)">
+                    </div>
+                </div>
+                <button class="add-btn" onclick="submitRequest()">Schedule Bulk Delivery</button>
+            </div>
+        </div>
+
+        <div class="restock-card">
+            <h3>Request History</h3>
+            <div id="request-list" style="margin-top: 1rem;">
+                <!-- Requests injected here -->
+            </div>
+        </div>
+    </div>
+
+    <script>
+        async function submitRequest() {
+            const data = {
+                seller_name: document.getElementById('seller-name').value,
+                warehouse_id: parseInt(document.getElementById('warehouse-id').value),
+                scheduled_date: document.getElementById('schedule-date').value,
+                items: [{
+                    product_id: parseInt(document.querySelector('.item-id').value),
+                    kg: parseFloat(document.querySelector('.item-kg').value)
+                }]
+            };
+
+            const res = await fetch('http://localhost:8000/restock-request', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            });
+            const result = await res.json();
+            if (result.status === 'success') {
+                alert('Delivery scheduled! Our logistics team will contact you.');
+                fetchRequests();
+            }
+        }
+
+        async function fetchRequests() {
+            const res = await fetch('http://localhost:8000/admin/restock-requests');
+            const requests = await res.json();
+            const list = document.getElementById('request-list');
+            list.innerHTML = requests.map(r => `
+                <div style="padding: 1rem; border-bottom: 1px solid var(--frost-border); display: flex; justify-content: space-between;">
+                    <span>${r.scheduled_date} - ${r.seller_name}</span>
+                    <span style="color: var(--ice)">${r.status.toUpperCase()}</span>
+                </div>
+            `).join('');
+        }
+        fetchRequests();
+    </script>
+</body>
+</html>

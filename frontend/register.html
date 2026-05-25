@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Join the Network | Arctic Logistics</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600&display=swap" rel="stylesheet">
+    <style>
+        body {
+            background: #020617;
+            padding: 4rem 1rem;
+        }
+
+        .reg-container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: rgba(15, 23, 42, 0.8);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 32px;
+            padding: 3rem;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+        }
+
+        .reg-header {
+            text-align: center;
+            margin-bottom: 3rem;
+        }
+
+        .reg-header h1 { font-size: 2.5rem; margin-bottom: 0.5rem; }
+        .reg-header h1 span { color: var(--ice); }
+        .reg-header p { color: #94a3b8; }
+
+        .form-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2rem;
+        }
+
+        .input-group { margin-bottom: 1.5rem; }
+        .input-group.full { grid-column: span 2; }
+
+        .input-group label {
+            display: block;
+            margin-bottom: 0.8rem;
+            font-size: 0.85rem;
+            color: #94a3b8;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .input-group input, .input-group select {
+            width: 100%;
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: white;
+            padding: 1rem;
+            border-radius: 12px;
+            outline: none;
+            transition: 0.3s;
+        }
+
+        .input-group input:focus, .input-group select:focus {
+            border-color: var(--ice);
+            box-shadow: 0 0 15px rgba(56, 189, 248, 0.2);
+        }
+
+        .terms-row {
+            grid-column: span 2;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            color: #94a3b8;
+            font-size: 0.9rem;
+            margin: 1rem 0;
+        }
+
+        .terms-row input { width: auto; }
+
+        .reg-btn {
+            grid-column: span 2;
+            padding: 1.2rem;
+            background: var(--ice);
+            color: #0f172a;
+            border: none;
+            border-radius: 12px;
+            font-weight: 700;
+            font-size: 1.1rem;
+            cursor: pointer;
+            transition: 0.3s;
+        }
+
+        .reg-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 15px 35px rgba(56, 189, 248, 0.4);
+        }
+
+        .footer-link {
+            text-align: center;
+            margin-top: 2rem;
+            color: #94a3b8;
+        }
+
+        .footer-link a { color: var(--ice); text-decoration: none; font-weight: 600; }
+    </style>
+</head>
+<body>
+    <div class="glass-bg"></div>
+
+    <div class="reg-container">
+        <div class="reg-header">
+            <h1>Arctic <span>Network</span></h1>
+            <p>Become a registered partner in the logistics ecosystem.</p>
+        </div>
+
+        <form id="reg-form" class="form-grid">
+            <div class="input-group">
+                <label>Full Name</label>
+                <input type="text" id="fullname" placeholder="John Doe" required>
+            </div>
+            <div class="input-group">
+                <label>Phone Number</label>
+                <input type="tel" id="phone" placeholder="+234..." required>
+            </div>
+            
+            <div class="input-group">
+                <label>Email Address</label>
+                <input type="email" id="email" placeholder="john@example.com" required>
+            </div>
+            <div class="input-group">
+                <label>Partner Role</label>
+                <select id="role" required>
+                    <option value="customer">🛒 Premium Customer</option>
+                    <option value="delivery_provider">🚲 Delivery Provider</option>
+                    <option value="seller">🏢 Sub-Seller Hub</option>
+                </select>
+            </div>
+
+            <div class="input-group">
+                <label>Primary Hub City</label>
+                <select id="city" required>
+                    <option value="Lagos">Lagos</option>
+                    <option value="Abuja">Abuja</option>
+                    <option value="Warri">Warri</option>
+                </select>
+            </div>
+            <div class="input-group">
+                <label>Referral ID (Optional)</label>
+                <input type="text" id="referral" placeholder="REF-0000">
+            </div>
+
+            <div class="input-group">
+                <label>Create Password</label>
+                <input type="password" id="password" placeholder="••••••••" required>
+            </div>
+            <div class="input-group">
+                <label>Confirm Password</label>
+                <input type="password" id="confirm-password" placeholder="••••••••" required>
+            </div>
+
+            <div class="terms-row">
+                <input type="checkbox" required>
+                <span>I agree to the Arctic Logistics Terms of Service and Privacy Policy.</span>
+            </div>
+
+            <button type="submit" class="reg-btn">Create Partner Account</button>
+        </form>
+
+        <div class="footer-link">
+            Already registered? <a href="login.html">Login to your dashboard</a>
+        </div>
+    </div>
+
+    <script>
+        document.getElementById('reg-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const pass = document.getElementById('password').value;
+            const confirm = document.getElementById('confirm-password').value;
+
+            if (pass !== confirm) {
+                alert("Passwords do not match!");
+                return;
+            }
+
+            const data = {
+                email: document.getElementById('email').value,
+                password: pass,
+                role: document.getElementById('role').value,
+                profile: {
+                    fullname: document.getElementById('fullname').value,
+                    phone: document.getElementById('phone').value,
+                    city: document.getElementById('city').value
+                }
+            };
+
+            try {
+                const response = await fetch('http://localhost:8000/register', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+
+                if (response.ok) {
+                    alert('Registration successful! Redirecting to login...');
+                    window.location.href = 'login.html';
+                } else {
+                    const err = await response.json();
+                    alert(err.detail || 'Registration failed');
+                }
+            } catch (err) {
+                alert('Connection to logistics hub failed');
+            }
+        });
+    </script>
+</body>
+</html>

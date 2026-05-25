@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Arctic Insights | KPI Dashboard</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body { padding-top: 100px; background: #020617; }
+        .kpi-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 1.5rem;
+            margin-bottom: 3rem;
+        }
+        .kpi-card {
+            background: rgba(15, 23, 42, 0.8);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 24px;
+            padding: 1.5rem;
+            text-align: center;
+        }
+        .kpi-card h4 { font-size: 0.8rem; color: #94a3b8; text-transform: uppercase; margin-bottom: 0.5rem; }
+        .kpi-card .value { font-size: 2rem; font-weight: 600; color: var(--ice); }
+        
+        .chart-container {
+            background: rgba(15, 23, 42, 0.5);
+            border-radius: 32px;
+            padding: 2rem;
+            border: 1px solid rgba(255,255,255,0.05);
+            margin-bottom: 2rem;
+        }
+        .chart-grid {
+            display: grid;
+            grid-template-columns: 1.5fr 1fr;
+            gap: 2rem;
+        }
+    </style>
+</head>
+<body>
+    <script src="auth.js"></script>
+    <script src="nav.js"></script>
+    
+    <nav>
+        <div class="nav-left">
+            <div class="logo">ARCTIC <span>INSIGHTS</span></div>
+        </div>
+        <div class="hamburger" onclick="toggleMenu()">
+            <span></span><span></span><span></span>
+        </div>
+    </nav>
+
+    <div class="nav-drawer">
+    </div>
+
+    <div style="max-width: 1200px; margin: 0 auto; padding: 0 1rem;">
+        <div class="kpi-grid">
+            <div class="kpi-card">
+                <h4>Total Revenue</h4>
+                <div class="value" id="kpi-revenue">₦0.00</div>
+            </div>
+            <div class="kpi-card">
+                <h4>Active Orders</h4>
+                <div class="value" id="kpi-orders">0</div>
+            </div>
+            <div class="kpi-card">
+                <h4>Fleet Rating</h4>
+                <div class="value" id="kpi-rating">0.0</div>
+            </div>
+            <div class="kpi-card">
+                <h4>System Health</h4>
+                <div class="value" style="color: #10b981;">STABLE</div>
+            </div>
+        </div>
+
+        <div class="chart-grid">
+            <div class="chart-container">
+                <h3 style="margin-bottom: 1.5rem;">Regional Hub <span>Dominance</span></h3>
+                <canvas id="hubChart"></canvas>
+            </div>
+            <div class="chart-container">
+                <h3 style="margin-bottom: 1.5rem;">Product <span>Demand</span></h3>
+                <canvas id="productChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        checkAuth('admin');
+
+        async function fetchKPI() {
+            try {
+                const res = await fetch('http://localhost:8000/admin/kpi', { headers: getAuthHeader() });
+                const data = await res.json();
+                
+                document.getElementById('kpi-revenue').textContent = `₦${data.revenue.toLocaleString()}`;
+                document.getElementById('kpi-orders').textContent = data.order_count;
+                document.getElementById('kpi-rating').textContent = `${data.avg_rating} ⭐`;
+
+                renderCharts(data);
+            } catch (err) { console.error(err); }
+        }
+
+        function renderCharts(data) {
+            // Hub Chart
+            new Chart(document.getElementById('hubChart'), {
+                type: 'bar',
+                data: {
+                    labels: Object.keys(data.hubs),
+                    datasets: [{
+                        label: 'Orders per Hub',
+                        data: Object.values(data.hubs),
+                        backgroundColor: '#38bdf8',
+                        borderRadius: 10
+                    }]
+                },
+                options: {
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        y: { beginAtZero: true, grid: { color: 'rgba(255,255,255,0.05)' } },
+                        x: { grid: { display: false } }
+                    }
+                }
+            });
+
+            // Product Chart
+            new Chart(document.getElementById('productChart'), {
+                type: 'doughnut',
+                data: {
+                    labels: ['Salmon', 'Chicken', 'Prawns'], // Simplified for demo
+                    datasets: [{
+                        data: Object.values(data.product_performance),
+                        backgroundColor: ['#0ea5e9', '#38bdf8', '#7dd3fc'],
+                        borderWidth: 0
+                    }]
+                }
+            });
+        }
+
+        fetchKPI();
+    </script>
+</body>
+</html>

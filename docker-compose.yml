@@ -1,0 +1,39 @@
+services:
+  db:
+    image: postgres:15
+    container_name: arctic_db
+    restart: always
+    environment:
+      POSTGRES_USER: arctic_user
+      POSTGRES_PASSWORD: arctic_pass
+      POSTGRES_DB: arctic_logistics
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  backend:
+    build: ./backend
+    container_name: arctic_backend
+    restart: always
+    ports:
+      - "8000:8000"
+    environment:
+      - SQLALCHEMY_DATABASE_URL=postgresql://arctic_user:arctic_pass@db:5432/arctic_logistics
+      - FRONTEND_PATH=/app/frontend
+      - SECRET_KEY=ARCTIC_FROZEN_LOGISTICS_PRIVATE_TOKEN_2026_X92
+    volumes:
+      - ./frontend:/app/frontend
+      - ./backend:/app
+    depends_on:
+      - db
+    networks:
+      - default
+      - proxy-tier
+
+networks:
+  proxy-tier:
+    external: true
+
+volumes:
+  postgres_data:

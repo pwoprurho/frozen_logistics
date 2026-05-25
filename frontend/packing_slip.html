@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Arctic Logistics | Packing Slip</title>
+    <style>
+        body { font-family: 'Helvetica', 'Arial', sans-serif; color: #333; margin: 0; padding: 40px; }
+        .header { display: flex; justify-content: space-between; border-bottom: 4px solid #0f172a; padding-bottom: 20px; }
+        .logo { font-size: 24px; font-weight: bold; letter-spacing: 2px; }
+        .logo span { color: #38bdf8; }
+        .slip-title { font-size: 28px; font-weight: bold; text-transform: uppercase; }
+        
+        .order-meta { margin: 40px 0; display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+        .meta-box h4 { margin: 0 0 5px; text-transform: uppercase; color: #666; font-size: 12px; }
+        .meta-box p { margin: 0; font-size: 16px; font-weight: bold; }
+
+        .items-table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        .items-table th { background: #f8fafc; text-align: left; padding: 12px; border-bottom: 2px solid #e2e8f0; }
+        .items-table td { padding: 12px; border-bottom: 1px solid #e2e8f0; }
+        
+        .total-row { margin-top: 30px; text-align: right; border-top: 2px solid #0f172a; padding-top: 10px; }
+        .total-row span { font-size: 20px; font-weight: bold; color: #0f172a; }
+
+        .footer { margin-top: 60px; display: flex; justify-content: space-between; align-items: flex-end; }
+        .sig-line { border-top: 1px solid #333; width: 200px; text-align: center; font-size: 12px; padding-top: 5px; margin-top: 80px; }
+        
+        .qr-section { text-align: center; border: 2px solid #38bdf8; padding: 15px; border-radius: 15px; background: #f0f9ff; }
+        .qr-section p { margin: 10px 0 0; font-size: 10px; font-weight: bold; color: #0369a1; text-transform: uppercase; }
+        #qrcode { display: inline-block; }
+
+        @media print {
+            .no-print { display: none; }
+            body { padding: 0; }
+        }
+    </style>
+    <!-- QR Code Library -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+</head>
+<body>
+    <div class="no-print" style="margin-bottom: 20px;">
+        <button onclick="window.print()" style="padding: 10px 20px; background: #38bdf8; color: white; border: none; border-radius: 5px; cursor: pointer;">Print Packing Slip</button>
+    </div>
+
+    <div class="header">
+        <div class="logo">ARCTIC <span>LOGISTICS</span></div>
+        <div class="slip-title">Packing Slip</div>
+    </div>
+
+    <div class="order-meta">
+        <div class="meta-box">
+            <h4>Customer</h4>
+            <p id="slip-customer"></p>
+        </div>
+        <div class="meta-box">
+            <h4>City Hub</h4>
+            <p id="slip-city"></p>
+        </div>
+        <div class="meta-box">
+            <h4>Transaction ID</h4>
+            <p id="slip-tx"></p>
+        </div>
+        <div class="meta-box">
+            <h4>Fulfillment Date</h4>
+            <p id="slip-date"></p>
+        </div>
+    </div>
+
+    <table class="items-table">
+        <thead>
+            <tr>
+                <th>Item Description</th>
+                <th>Quantity / Weight</th>
+            </tr>
+        </thead>
+        <tbody id="slip-items">
+            <!-- Items injected here -->
+        </tbody>
+    </table>
+
+    <div class="total-row">
+        Total Shipment Weight: <span id="slip-total"></span> KG
+    </div>
+
+    <div class="footer">
+        <div>
+            <div class="sig-line">Warehouse Manager</div>
+        </div>
+        
+        <!-- SEO Review QR Code -->
+        <div class="qr-section">
+            <div id="qrcode"></div>
+            <p>Scan to Rate Our Service<br>on Google Reviews</p>
+        </div>
+
+        <div>
+            <div class="sig-line">Logistics Driver</div>
+        </div>
+    </div>
+
+    <script>
+        // Data injected via URL parameters
+        const params = new URLSearchParams(window.location.search);
+        document.getElementById('slip-customer').textContent = params.get('name');
+        document.getElementById('slip-city').textContent = params.get('city');
+        document.getElementById('slip-tx').textContent = params.get('tx');
+        document.getElementById('slip-date').textContent = new Date().toLocaleDateString();
+        
+        const items = JSON.parse(params.get('items') || '[]');
+        const table = document.getElementById('slip-items');
+        let total = 0;
+        
+        items.forEach(item => {
+            const row = table.insertRow();
+            row.insertCell(0).textContent = `Frozen Product (ID: ${item.product_id})`;
+            row.insertCell(1).textContent = `${item.kg} KG`;
+            total += parseFloat(item.kg);
+        });
+        
+        document.getElementById('slip-total').textContent = total.toFixed(1);
+
+        // Generate SEO Review QR Code
+        // Replace 'YOUR_GOOGLE_PLACE_ID' with your actual Place ID to boost your real SEO
+        const googleReviewUrl = `https://search.google.com/local/writereview?placeid=YOUR_GOOGLE_PLACE_ID&tx_ref=${params.get('tx')}`;
+        
+        new QRCode(document.getElementById("qrcode"), {
+            text: googleReviewUrl,
+            width: 80,
+            height: 80,
+            colorDark : "#0f172a",
+            colorLight : "#f0f9ff",
+            correctLevel : QRCode.CorrectLevel.H
+        });
+    </script>
+</body>
+</html>
